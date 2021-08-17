@@ -14,7 +14,7 @@ from zipfile import BadZipFile, ZipFile
 
 from pydantic import BaseModel, Field, validator
 import requests
-from requests.exceptions import ChunkedEncodingError
+from requests.exceptions import ChunkedEncodingError, ConnectionError as ReqConError
 
 from .util import delay_until, expand_template, log, sanitize_pathname
 
@@ -108,17 +108,17 @@ class APIClient:
     def download(self, path: str, filepath: Path) -> None:
         i = 0
         while True:
-            r = self.get(path, stream=True)
             try:
                 try:
+                    r = self.get(path, stream=True)
                     with filepath.open("wb") as fp:
                         for chunk in r.iter_content(chunk_size=8192):
                             fp.write(chunk)
-                except ChunkedEncodingError as e:
+                except (ChunkedEncodingError, ReqConError) as e:
                     if i < self.MAX_RETRIES:
                         log.warning(
-                            "Download from %s interrupted: %s; waiting & retrying",
-                            r.request.url,
+                            "Download of %s interrupted: %s; waiting & retrying",
+                            path,
                             str(e),
                         )
                         i += 1
