@@ -261,6 +261,33 @@ keys:
                 saved.  If this is not specified, no artifacts will be
                 downloaded.
 
+        ``workflows``
+            A specification of the workflows for which to retrieve assets.
+            This can be either a list of workflow names or a mapping containing
+            the following fields:
+
+            ``include``
+                A list of workflows to retrieve assets for, given as either
+                names or (when ``regex`` is true) `Python regular expressions`_
+                to match against names.  If ``include`` is omitted, it defaults
+                to including all workflows.
+
+            ``exclude``
+                A list of workflows to not retrieve assets for, given as either
+                names or (when ``regex`` is true) `Python regular expressions`_
+                to match against names.  If ``exclude`` is omitted, no
+                workflows are excluded.  Workflows that match both ``include``
+                and ``exclude`` are excluded.
+
+            ``regex``
+                A boolean.  If true (default false), the elements of the
+                ``include`` and ``exclude`` fields are treated as `Python
+                regular expressions`_ that are matched (unanchored) against
+                workflow names; if false, they are used as exact names
+
+            When ``workflows`` is not specified, assets are retrieved for all
+            available workflows.
+
 ``since``
     A timestamp (date, time, & timezone); only assets for builds started after
     the given point in time will be retrieved.  If not specified, the cutoff
