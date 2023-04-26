@@ -10,6 +10,10 @@
     :target: https://ci.appveyor.com/project/yarikoptic/tinuous/branch/master
     :alt: Appveyor Status
 
+.. image:: https://dl.circleci.com/status-badge/img/gh/con/tinuous/tree/master.svg?style=svg
+    :target: https://dl.circleci.com/status-badge/redirect/gh/con/tinuous/tree/master
+    :alt: CircleCI Status
+
 .. image:: https://img.shields.io/pypi/pyversions/tinuous.svg
     :target: https://pypi.org/project/tinuous/
 
@@ -235,6 +239,28 @@ keys:
             The project slug for the repository on Appveyor; if not specified,
             it is assumed that the slug is the same as the repository name
 
+    ``circleci``
+        Configuration for retrieving assets from CircleCI.  Subfields:
+
+        ``paths``
+            A mapping giving `template strings <Path Templates_>`_ for the
+            paths at which to save various types of assets.  If this is empty
+            or not present, no assets are retrieved.  Subfields:
+
+            ``logs``
+                A template string that will be instantiated for each action of
+                each step of each job of each workflow of each pipeline to
+                produce the path for the file (relative to the current working
+                directory) under which the actions's build logs will be saved.
+                If this is not specified, no logs will be downloaded.
+
+            ``artifacts``
+                A template string that will be instantiated for each job to
+                produce the path for the directory (relative to the current
+                working directory) under which the job's artifacts will be
+                saved.  If this is not specified, no artifacts will be
+                downloaded.
+
 ``since``
     A timestamp (date, time, & timezone); only assets for builds started after
     the given point in time will be retrieved.  If not specified, the cutoff
@@ -338,6 +364,10 @@ A sample config file:
           logs: '{build_prefix}/{number}/{job}.txt'
         accountName: mih
         projectSlug: datalad
+      circleci:
+        paths:
+          logs: '{build_prefix}/{wf_name}/{number}/{job_name}/{step}-{index}.txt'
+          artifacts: '{path_prefix}/{wf_name}/{number}/{job_name}/artifacts/'
     since: 2021-01-20T00:00:00Z
     max-days-back: 14
     types: [cron, manual, pr, push]
@@ -387,8 +417,8 @@ Placeholder             Definition
 ``{timestamp_local}``   The date & time at which the build was started or the
                         release was published, in the local system timezone.
                         This is formatted in the same way as ``{timestamp}``.
-``{ci}``                The name of the CI system (``github``, ``travis``, or
-                        ``appveyor``)
+``{ci}``                The name of the CI system (``github``, ``travis``,
+                        ``appveyor``, or ``circleci``)
 ``{type}``              The event type that triggered the build (``cron``,
                         ``manual``, ``pr``, or ``push``), or ``release`` for
                         GitHub releases
@@ -398,7 +428,8 @@ Placeholder             Definition
                         the associated pull request, or ``UNK`` if it cannot be
                         determined; for ``push``, this is the escaped [1]_ name
                         of the branch to which the push was made (or possibly
-                        the tag that was pushed, if using Appveyor) [2]_
+                        the tag that was pushed, if using Appveyor or CircleCi)
+                        [2]_
 ``{release_tag}``       *(``releases_path`` only)* The release tag
 ``{build_commit}``      The hash of the commit the build ran against or that
                         was tagged for the release.  Note that, for PR builds
@@ -411,27 +442,36 @@ Placeholder             Definition
                         (along with PR builds on GitHub Actions), this is
                         always the same as ``{build_commit}``.
 ``{number}``            The run number of the workflow run (GitHub) or the
-                        build number (Travis and Appveyor) [2]_
+                        build number (Travis and Appveyor) or the pipeline
+                        number (CircleCI) [2]_
 ``{status}``            The success status of the workflow run (GitHub) or job
-                        (Travis and Appveyor); the exact strings used depend on
-                        the CI system [2]_
-``{common_status}``     The success status of the workflow run or job,
+                        (Travis and Appveyor) or action (CircleCI); the exact
+                        strings used depend on the CI system [2]_
+``{common_status}``     The success status of the workflow run, job, or action,
                         normalized into one of ``success``, ``failed``,
                         ``errored``, or ``incomplete`` [2]_
-``{wf_name}``           *(GitHub only)* The escaped [1]_ name of the workflow
-                        [2]_
+``{wf_name}``           *(GitHub and CircleCI only)* The escaped [1]_ name of
+                        the workflow [2]_
 ``{wf_file}``           *(GitHub only)* The basename of the workflow file
                         (including the file extension) [2]_
+``{wf_id}``             *(CircleCI only)* The UUID of the workflow [2]_
 ``{run_id}``            *(GitHub only)* The unique ID of the workflow run [2]_
-``{job}``               *(Travis and Appveyor only)* The number of the job,
-                        without the build number prefix (Travis) or the job ID
-                        string (Appveyor) [2]_
+``{pipeline_id}``       *(CircleCI only)* The UUID of the pipeline [2]_
+``{job}``               *(Travis, Appveyor, and CircleCI only)* The number of
+                        the job, without the build number prefix (Travis) or
+                        the job ID string (Appveyor) [2]_
 ``{job_index}``         *(Travis and Appveyor only)* The index of the job in
                         the list returned by the API, starting from 1 [2]_
 ``{job_env}``           *(Appveyor only)* The escaped [1]_ environment
                         variables specific to the job [2]_
 ``{job_env_hash}``      *(Appveyor only)* The SHA1 hash of ``{job_env}`` before
                         escaping [2]_
+``{job_id}``            *(CircleCI only)* The UUID of the job [2]_
+``{job_name}``          *(CircleCI only)* The escaped [1]_ name of the job [2]_
+``{step}``              *(CircleCI only)* The number of the step [2]_
+``{step_name}``         *(CircleCI only)* The escaped [1]_ name of the step [2]_
+``{index}``             *(CircleCI only)* The index of the parallel container
+                        that the step ran on [2]_
 ======================  =======================================================
 
 .. _datetime: https://docs.python.org/3/library/datetime.html#datetime-objects
@@ -484,8 +524,8 @@ A Travis API access token can be acquired as follows:
     authenticate by running ``travis login --com --github-token
     $GITHUB_TOKEN``.
 
-- If the script will be run on the same machine that the above steps are
-  carried out on, you can stop here, and the script will retrieve the token
+- If ``tinuous`` will be run on the same machine that the above steps are
+  carried out on, you can stop here, and ``tinuous`` will retrieve the token
   directly from the ``travis`` command.
 
 - Run ``travis token --com`` to retrieve the API access token.
@@ -501,6 +541,22 @@ In order to retrieve logs from Appveyor, an Appveyor API key (for either all
 accessible accounts or just the specific account associated with the
 repository) must be specified via the ``APPVEYOR_TOKEN`` environment variable.
 Such a key can be obtained at <https://ci.appveyor.com/api-keys>.
+
+CircleCI
+~~~~~~~~
+
+In order to retrieve logs & artifacts from CircleCi, a CircleCI API token
+(either a personal token or a project token with at least read access) must be
+specified via the ``CIRCLECI_CLI_TOKEN`` environment variable.
+
+Alternatively, if you have installed the `CircleCI local CLI
+<https://circleci.com/docs/local-cli/>`_ on the same machine that ``tinuous``
+will be running on and supplied an API token to it by running ``circleci
+setup``, ``tinuous`` will read the supplied API token from the CLI's config
+file.
+
+See <https://circleci.com/docs/managing-api-tokens/> for instructions on how to
+obtain a CircleCI API token.
 
 
 Cron Integration
@@ -520,6 +576,7 @@ is as follows:
         GITHUB_TOKEN=ghp_abcdef0123456789
         TRAVIS_TOKEN=asdfghjkl
         APPVEYOR_TOKEN=v2.qwertyuiop
+        CIRCLECI_CLI_TOKEN=zxcvbnm
 
 4. Create a Python virtualenv_ to provide an isolated environment to install
    ``tinuous`` into::

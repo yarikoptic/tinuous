@@ -14,7 +14,7 @@ from yaml import safe_load
 from .base import APIClient
 from .base import Artifact as BaseArtifact
 from .base import BuildAsset, BuildLog, CISystem, EventType, WorkflowSpec
-from .util import log
+from .util import log, sanitize_pathname
 
 
 class CircleCI(CISystem):
@@ -148,14 +148,14 @@ class CircleCI(CISystem):
                                             repo=self.repo,
                                             pipeline_id=pipeline.id,
                                             workflow_id=wf.id,
-                                            workflow_name=wf.name,
+                                            workflow_name=sanitize_pathname(wf.name),
                                             job=job.job_number,
                                             job_id=job.id,
-                                            job_name=job.name,
+                                            job_name=sanitize_pathname(job.name),
                                             step=str(action.step)
                                             if action.step is not None
                                             else "UNK",
-                                            step_name=step.name,
+                                            step_name=sanitize_pathname(step.name),
                                             index=action.index,
                                         )
                             if artifacts:
