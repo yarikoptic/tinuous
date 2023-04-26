@@ -1,38 +1,38 @@
 import pytest
 
-from tinuous.base import WorkflowSpec
+from tinuous.base import GHWorkflowSpec
 
 
 @pytest.mark.parametrize(
     "spec,path,r",
     [
         (
-            WorkflowSpec(include=["build.yaml"], exclude=[], regex=False),
+            GHWorkflowSpec(include=["build.yaml"], exclude=[], regex=False),
             ".github/workflows/build.yaml",
             True,
         ),
         (
-            WorkflowSpec(include=["build.yaml"], exclude=[], regex=False),
+            GHWorkflowSpec(include=["build.yaml"], exclude=[], regex=False),
             ".github/workflows/build.yml",
             False,
         ),
         (
-            WorkflowSpec(include=[r"^build-*\.ya?ml$"], exclude=[], regex=False),
+            GHWorkflowSpec(include=[r"^build-*\.ya?ml$"], exclude=[], regex=False),
             ".github/workflows/build-foo.yml",
             False,
         ),
         (
-            WorkflowSpec(include=[r"^build-.*\.ya?ml$"], exclude=[], regex=True),
+            GHWorkflowSpec(include=[r"^build-.*\.ya?ml$"], exclude=[], regex=True),
             ".github/workflows/build-foo.yml",
             True,
         ),
         (
-            WorkflowSpec(include=[r"^build-.*\.ya?ml$"], exclude=[], regex=True),
+            GHWorkflowSpec(include=[r"^build-.*\.ya?ml$"], exclude=[], regex=True),
             ".github/workflows/build-foo.yaml",
             True,
         ),
         (
-            WorkflowSpec(
+            GHWorkflowSpec(
                 include=[r"^build-.*\.ya?ml$"],
                 exclude=[r"^build-box\.yaml$"],
                 regex=True,
@@ -41,7 +41,7 @@ from tinuous.base import WorkflowSpec
             True,
         ),
         (
-            WorkflowSpec(
+            GHWorkflowSpec(
                 include=[r"^build-.*\.ya?ml$"],
                 exclude=[r"^build-box\.yaml$"],
                 regex=True,
@@ -50,16 +50,16 @@ from tinuous.base import WorkflowSpec
             False,
         ),
         (
-            WorkflowSpec(include=["build.yaml", "test.yml"], exclude=[], regex=True),
+            GHWorkflowSpec(include=["build.yaml", "test.yml"], exclude=[], regex=True),
             ".github/workflows/build.yaml",
             True,
         ),
         (
-            WorkflowSpec(include=["build.yaml", "test.yml"], exclude=[], regex=True),
+            GHWorkflowSpec(include=["build.yaml", "test.yml"], exclude=[], regex=True),
             ".github/workflows/test.yml",
             True,
         ),
     ],
 )
-def test_workflowspec_match(spec: WorkflowSpec, path: str, r: bool) -> None:
+def test_workflowspec_match(spec: GHWorkflowSpec, path: str, r: bool) -> None:
     assert spec.match(path) is r

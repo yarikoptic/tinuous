@@ -27,9 +27,9 @@
 | `Issues <https://github.com/con/tinuous/issues>`_
 | `Changelog <https://github.com/con/tinuous/blob/master/CHANGELOG.md>`_
 
-``tinuous`` is a command for downloading build logs and (for GitHub
-only) artifacts & release assets for a GitHub repository from GitHub Actions,
-Travis-CI.com, and/or Appveyor.
+``tinuous`` is a command for downloading build logs, artifacts, & release
+assets for a GitHub repository from GitHub Actions, Travis-CI.com, Appveyor,
+and/or CircleCI.
 
 See <https://github.com/con/tinuous-inception> for an example setup that uses
 ``tinuous`` with GitHub Actions to fetch the CI logs for ``tinuous`` itself.

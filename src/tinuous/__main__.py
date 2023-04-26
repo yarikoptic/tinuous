@@ -48,7 +48,9 @@ from .util import log
 )
 @click.pass_context
 def main(ctx: click.Context, config: str, log_level: int, env: Optional[str]) -> None:
-    """Download build logs from GitHub Actions, Travis, and Appveyor"""
+    """
+    Download build logs from GitHub Actions, Travis, Appveyor, and CircleCI
+    """
     load_dotenv(env)
     logging.basicConfig(
         format="%(asctime)s [%(levelname)-8s] %(name)s %(message)s",

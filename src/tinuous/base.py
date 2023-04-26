@@ -34,6 +34,16 @@ COMMON_STATUS_MAP = {
     "skipped": "incomplete",
     "stale": "incomplete",
     "started": "incomplete",
+    # CircleCI:
+    "retried": "incomplete",
+    "infrastructure_fail": "errored",
+    "timedout": "errored",
+    "not_run": "incomplete",
+    "running": "incomplete",
+    "queued": "incomplete",
+    "not_running": "incomplete",
+    "no_tests": "success",
+    "fixed": "success",
     # Error on unknown so we're forced to categorize them.
 }
 
@@ -274,8 +284,12 @@ class WorkflowSpec(NoExtraModel):
             v = r"\A" + re.escape(v) + r"\Z"
         return v
 
-    def match(self, wf_path: str) -> bool:
-        s = PurePosixPath(wf_path).name
-        return any(r.search(s) for r in self.include) and not any(
-            r.search(s) for r in self.exclude
+    def match(self, wf_name: str) -> bool:
+        return any(r.search(wf_name) for r in self.include) and not any(
+            r.search(wf_name) for r in self.exclude
         )
+
+
+class GHWorkflowSpec(WorkflowSpec):
+    def match(self, wf_path: str) -> bool:
+        return super().match(PurePosixPath(wf_path).name)

@@ -1,9 +1,9 @@
 """
-Download build logs from GitHub Actions, Travis, and Appveyor
+Download build logs from GitHub Actions, Travis, Appveyor, and CircleCI
 
-``tinuous`` is a command for downloading build logs and (for GitHub
-only) artifacts & release assets for a GitHub repository from GitHub Actions,
-Travis-CI.com, and/or Appveyor.
+``tinuous`` is a command for downloading build logs, artifacts, & release
+assets for a GitHub repository from GitHub Actions, Travis-CI.com, Appveyor,
+and/or CircleCI.
 
 Visit <https://github.com/con/tinuous> for more information.
 """

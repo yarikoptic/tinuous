@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta, timezone
 import re
@@ -7,7 +9,8 @@ from pydantic import Field, validator
 from pydantic.fields import ModelField
 
 from .appveyor import Appveyor
-from .base import CISystem, EventType, NoExtraModel, WorkflowSpec
+from .base import CISystem, EventType, GHWorkflowSpec, NoExtraModel, WorkflowSpec
+from .circleci import CircleCI
 from .github import GitHubActions
 from .travis import Travis
 from .util import log
@@ -32,6 +35,13 @@ class GHPathsDict(PathsDict):
 
     def gets_releases(self) -> bool:
         return self.releases is not None
+
+
+class CCIPathsDict(PathsDict):
+    artifacts: Optional[str] = None
+
+    def gets_builds(self) -> bool:
+        return self.logs is not None or self.artifacts is not None
 
 
 class CIConfig(NoExtraModel, ABC):
@@ -61,7 +71,7 @@ class CIConfig(NoExtraModel, ABC):
 
 class GitHubConfig(CIConfig):
     paths: GHPathsDict = Field(default_factory=GHPathsDict)
-    workflows: WorkflowSpec = Field(default_factory=WorkflowSpec)
+    workflows: GHWorkflowSpec = Field(default_factory=GHWorkflowSpec)
 
     @validator("workflows", pre=True)
     def _workflow_list(cls, v: Any) -> Any:  # noqa: B902, U100
@@ -136,10 +146,35 @@ class AppveyorConfig(CIConfig):
         )
 
 
+class CircleCIConfig(CIConfig):
+    paths: CCIPathsDict = Field(default_factory=CCIPathsDict)
+    workflows: WorkflowSpec = Field(default_factory=WorkflowSpec)
+
+    @staticmethod
+    def get_auth_tokens() -> dict[str, str]:
+        return CircleCI.get_auth_tokens()
+
+    def get_system(
+        self,
+        repo: str,
+        since: datetime,
+        until: Optional[datetime],
+        tokens: dict[str, str],
+    ) -> CircleCI:
+        return CircleCI(
+            repo=repo,
+            since=since,
+            until=until,
+            token=tokens["circleci"],
+            workflow_spec=self.workflows,
+        )
+
+
 class CIConfigDict(NoExtraModel):
     github: Optional[GitHubConfig] = None
     travis: Optional[TravisConfig] = None
     appveyor: Optional[AppveyorConfig] = None
+    circleci: Optional[CircleCIConfig] = None
 
     def items(self) -> Iterator[Tuple[str, CIConfig]]:
         if self.github is not None:
@@ -148,6 +183,8 @@ class CIConfigDict(NoExtraModel):
             yield ("travis", self.travis)
         if self.appveyor is not None:
             yield ("appveyor", self.appveyor)
+        if self.circleci is not None:
+            yield ("circleci", self.circleci)
 
 
 class DataladConfig(NoExtraModel):
