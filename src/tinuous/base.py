@@ -17,7 +17,13 @@ import requests
 from requests.exceptions import ChunkedEncodingError
 from requests.exceptions import ConnectionError as ReqConError
 
-from .util import delay_until, expand_template, log, sanitize_pathname
+from .util import (
+    delay_until,
+    expand_template,
+    log,
+    parse_retry_after,
+    sanitize_pathname,
+)
 
 COMMON_STATUS_MAP = {
     "success": "success",
@@ -96,7 +102,18 @@ class APIClient:
         i = 0
         while True:
             r = self.session.get(url, **kwargs)
-            if r.status_code >= 500 and i < self.MAX_RETRIES:
+            if (
+                r.status_code == 429
+                and "Retry-After" in r.headers
+                and (delay := parse_retry_after(r.headers["Retry-After"])) is not None
+            ):
+                # Add 1 because `sleep()` isn't always exactly accurate
+                delay += 1
+                log.warning("Rate limit exceeded; sleeping for %s seconds", delay)
+                sleep(delay)
+            elif (
+                r.status_code >= 500 or r.status_code == 429
+            ) and i < self.MAX_RETRIES:
                 log.warning(
                     "Request to %s returned %d; waiting & retrying", url, r.status_code
                 )

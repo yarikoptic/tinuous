@@ -1,11 +1,13 @@
 from collections import deque
 from datetime import datetime, timezone
+import email.utils
 import logging
 import os
 from pathlib import Path
 import re
 from string import Formatter
 import subprocess
+from time import time
 from typing import Any, Dict, Iterator, Mapping, Optional, Sequence, Union
 
 log = logging.getLogger("tinuous")
@@ -153,3 +155,16 @@ def delay_until(dt: datetime) -> float:
     # Take `max()` just in case we're right up against `dt`, and add 1 because
     # `sleep()` isn't always exactly accurate
     return max((dt - datetime.now(timezone.utc)).total_seconds(), 0) + 1
+
+
+# <https://github.com/urllib3/urllib3/blob/214b184923388328919b0a4b0c15bff603aa51be/src/urllib3/util/retry.py#L304>
+def parse_retry_after(retry_after: str) -> Optional[float]:
+    # Whitespace: https://tools.ietf.org/html/rfc7230#section-3.2.4
+    if re.fullmatch(r"\s*[0-9]+\s*", retry_after):
+        return int(retry_after)
+    else:
+        retry_date_tuple = email.utils.parsedate_tz(retry_after)
+        if retry_date_tuple is None:
+            return None
+        retry_date = email.utils.mktime_tz(retry_date_tuple)
+        return max(retry_date - time(), 0)
