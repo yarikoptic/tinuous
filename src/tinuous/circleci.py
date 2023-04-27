@@ -226,7 +226,7 @@ class TriggerType(Enum):
 
 class Actor(BaseModel):
     login: str
-    avatar_url: str
+    avatar_url: Optional[str] = None
 
 
 class Trigger(BaseModel):
@@ -282,6 +282,7 @@ class WorkflowStatus(Enum):
             WorkflowStatus.FAILED,
             WorkflowStatus.ERROR,
             WorkflowStatus.CANCELED,
+            WorkflowStatus.NOT_RUN,
         }
 
 
@@ -410,11 +411,11 @@ class Jobv1(BaseModel):
     queued_at: Optional[datetime] = None
     start_time: Optional[datetime] = None
     stop_time: Optional[datetime] = None
-    build_time_millis: int
+    build_time_millis: Optional[int] = None
     username: str
     reponame: str
     lifecycle: Lifecycle
-    outcome: Outcome
+    outcome: Optional[Outcome] = None
     status: Jobv1Status
     retry_of: Optional[int] = None
     steps: List[Step]
