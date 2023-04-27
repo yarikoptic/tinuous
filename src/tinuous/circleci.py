@@ -187,246 +187,6 @@ class CircleCI(CISystem):
                     )
 
 
-class PipelineError(BaseModel):
-    type: str
-    message: str
-
-
-class PipelineState(Enum):
-    CREATED = "created"
-    ERRORED = "errored"
-    SETUP_PENDING = "setup-pending"
-    SETUP = "setup"
-    PENDING = "pending"
-
-
-class TriggerType(Enum):
-    SCHEDULED = "scheduled-pipeline"
-    EXPLICIT = "explicit"
-    API = "api"
-    WEBHOOK = "webhook"
-
-    def as_event_type(self) -> EventType:
-        if self is TriggerType.SCHEDULED:
-            return EventType.CRON
-        elif self is TriggerType.EXPLICIT:
-            return EventType.MANUAL
-        elif self is TriggerType.API:
-            # TODO: Is this correct?  Are builds for GitHub pushes ever
-            # triggered via the API?
-            # Note that the initial run after setting up a project on CircleCI
-            # counts as being triggered by the API.
-            return EventType.MANUAL
-        elif self is TriggerType.WEBHOOK:
-            # CircleCI only runs jobs for pushes, not for PR creation
-            return EventType.PUSH
-        else:
-            raise AssertionError(f"Unexpected TriggerType {self!r}")
-
-
-class Actor(BaseModel):
-    login: str
-    avatar_url: Optional[str] = None
-
-
-class Trigger(BaseModel):
-    type: TriggerType
-    received_at: datetime
-    actor: Actor
-
-
-class Commit(BaseModel):
-    subject: str
-    body: str
-
-
-class VCS(BaseModel):
-    provider_name: str
-    target_repository_url: str
-    branch: Optional[str] = None
-    review_id: Optional[str] = None
-    review_url: Optional[str] = None
-    revision: str
-    tag: Optional[str] = None
-    commit: Optional[Commit] = None
-    origin_repository_url: str
-
-
-class Pipeline(BaseModel):
-    id: str
-    errors: List[PipelineError]
-    project_slug: str
-    updated_at: Optional[datetime] = None
-    number: int
-    # trigger_parameters: List[Any] = Field(default_factory=list)
-    state: PipelineState
-    created_at: datetime
-    trigger: Trigger
-    vcs: Optional[VCS] = None
-
-
-class WorkflowStatus(Enum):
-    SUCCESS = "success"
-    RUNNING = "running"
-    NOT_RUN = "not_run"
-    FAILED = "failed"
-    ERROR = "error"
-    FAILING = "failing"
-    ON_HOLD = "on_hold"
-    CANCELED = "canceled"
-    UNAUTHORIZED = "unauthorized"
-
-    def finished(self) -> bool:
-        return self in {
-            WorkflowStatus.SUCCESS,
-            WorkflowStatus.FAILED,
-            WorkflowStatus.ERROR,
-            WorkflowStatus.CANCELED,
-            WorkflowStatus.NOT_RUN,
-        }
-
-
-class Workflow(BaseModel):
-    pipeline_id: str
-    canceled_by: Optional[str] = None
-    id: str
-    name: str
-    project_slug: str
-    errored_by: Optional[str] = None
-    tag: Optional[str] = None  # Workflow tag, not Git tag
-    status: WorkflowStatus
-    started_by: str
-    pipeline_number: int
-    created_at: datetime
-    stopped_at: Optional[datetime] = None
-
-
-class JobStatus(Enum):
-    SUCCESS = "success"
-    RUNNING = "running"
-    NOT_RUN = "not_run"
-    FAILED = "failed"
-    RETRIED = "retried"
-    QUEUED = "queued"
-    NOT_RUNNING = "not_running"
-    INFRASTRUCTURE_FAIL = "infrastructure_fail"
-    TIMEDOUT = "timedout"
-    ON_HOLD = "on_hold"
-    TERMINATED_UNKNOWN = "terminated-unknown"
-    BLOCKED = "blocked"
-    CANCELED = "canceled"
-    UNAUTHORIZED = "unauthorized"
-
-
-class JobType(Enum):
-    BUILD = "build"
-    APPROVAL = "approval"
-
-
-class Job(BaseModel):
-    canceled_by: Optional[str] = None
-    dependencies: List[str]
-    job_number: int
-    id: str
-    started_at: Optional[datetime] = None
-    name: str
-    approved_by: Optional[str] = None
-    project_slug: str
-    status: JobStatus
-    type: JobType
-    stopped_at: Optional[datetime] = None
-    approval_request_id: Optional[str] = None
-
-
-class Lifecycle(Enum):
-    QUEUED = "queued"
-    NOT_RUN = "not_run"
-    NOT_RUNNING = "not_running"
-    RUNNING = "running"
-    FINISHED = "finished"
-
-
-class Outcome(Enum):
-    CANCELED = "canceled"
-    INFRASTRUCTURE_FAIL = "infrastructure_fail"
-    TIMEDOUT = "timedout"
-    FAILED = "failed"
-    NO_TESTS = "no_tests"
-    SUCCESS = "success"
-
-
-class Jobv1Status(Enum):
-    RETRIED = "retried"
-    CANCELED = "canceled"
-    INFRASTRUCTURE_FAIL = "infrastructure_fail"
-    TIMEDOUT = "timedout"
-    NOT_RUN = "not_run"
-    RUNNING = "running"
-    FAILED = "failed"
-    QUEUED = "queued"
-    NOT_RUNNING = "not_running"
-    NO_TESTS = "no_tests"
-    FIXED = "fixed"
-    SUCCESS = "success"
-
-
-class Action(BaseModel):
-    bash_command: Optional[str] = None
-    run_time_millis: int
-    start_time: datetime
-    end_time: datetime
-    name: str
-    exit_code: Optional[int] = None
-    type: str
-    index: int
-    status: Jobv1Status
-    step: Optional[int] = None
-    source: Optional[str] = None
-    failed: Optional[bool] = None
-    parallel: bool = False
-    # output_url: str
-    # messages: List[str?] = Field(default_factory=list)
-    # continue: Optional[???] = None
-    # timedout: Optional[???] = None
-    # infrastructure_fail: Optional[???] = None
-
-
-class Step(BaseModel):
-    name: str
-    actions: List[Action]
-
-
-class Jobv1(BaseModel):
-    vcs_url: str
-    build_url: str
-    build_num: int
-    branch: str
-    vcs_revision: str
-    committer_name: Optional[str] = None
-    committer_email: Optional[str] = None
-    subject: Optional[str] = None
-    body: Optional[str] = None
-    why: str
-    # dont_build: Optional[str?]
-    queued_at: Optional[datetime] = None
-    start_time: Optional[datetime] = None
-    stop_time: Optional[datetime] = None
-    build_time_millis: Optional[int] = None
-    username: str
-    reponame: str
-    lifecycle: Lifecycle
-    outcome: Optional[Outcome] = None
-    status: Jobv1Status
-    retry_of: Optional[int] = None
-    steps: List[Step]
-
-
-class Artifact(BaseModel):
-    path: str
-    node_index: int
-    url: str
-
-
 class CCIActionLog(BuildLog):
     repo: str
     pipeline_id: str
@@ -527,3 +287,252 @@ class CCIArtifact(BaseArtifact):
         )
         self.client.download(self.url, target)
         return [target]
+
+
+# The following classes are intended to match the structures returned by the
+# CircleCI API, but enough inaccuracies or underspecifications in the API docs
+# were encountered (mostly regarding fields that could be absent despite not
+# being indicated as such) that I've decided it's safer to comment out
+# everything except the fields & classes that this code actually uses, keeping
+# them around in case we need them some day.
+
+# class PipelineError(BaseModel):
+#    type_: str = Field(alias="type")
+#    message: str
+
+
+# class PipelineState(Enum):
+#    CREATED = "created"
+#    ERRORED = "errored"
+#    SETUP_PENDING = "setup-pending"
+#    SETUP = "setup"
+#    PENDING = "pending"
+
+
+class TriggerType(Enum):
+    SCHEDULED = "scheduled-pipeline"
+    EXPLICIT = "explicit"
+    API = "api"
+    WEBHOOK = "webhook"
+
+    def as_event_type(self) -> EventType:
+        if self is TriggerType.SCHEDULED:
+            return EventType.CRON
+        elif self is TriggerType.EXPLICIT:
+            return EventType.MANUAL
+        elif self is TriggerType.API:
+            # TODO: Is this correct?  Are builds for GitHub pushes ever
+            # triggered via the API?
+            # Note that the initial run after setting up a project on CircleCI
+            # counts as being triggered by the API.
+            return EventType.MANUAL
+        elif self is TriggerType.WEBHOOK:
+            # CircleCI only runs jobs for pushes, not for PR creation
+            return EventType.PUSH
+        else:
+            raise AssertionError(f"Unexpected TriggerType {self!r}")
+
+
+# class Actor(BaseModel):
+#    login: str
+#    avatar_url: Optional[str] = None
+
+
+class Trigger(BaseModel):
+    type: TriggerType
+
+
+#    received_at: datetime
+#    actor: Actor
+
+
+# class Commit(BaseModel):
+#    subject: str
+#    body: str
+
+
+class VCS(BaseModel):
+    provider_name: str
+    # target_repository_url: str
+    branch: Optional[str] = None
+    # review_id: Optional[str] = None
+    # review_url: Optional[str] = None
+    revision: str
+    tag: Optional[str] = None
+    # commit: Optional[Commit] = None
+    # origin_repository_url: str
+
+
+class Pipeline(BaseModel):
+    id: str
+    # errors: List[PipelineError]
+    # project_slug: str
+    # updated_at: Optional[datetime] = None
+    number: int
+    # trigger_parameters: List[Any] = Field(default_factory=list)
+    # state: PipelineState
+    created_at: datetime
+    trigger: Trigger
+    vcs: Optional[VCS] = None
+
+
+class WorkflowStatus(Enum):
+    SUCCESS = "success"
+    RUNNING = "running"
+    NOT_RUN = "not_run"
+    FAILED = "failed"
+    ERROR = "error"
+    FAILING = "failing"
+    ON_HOLD = "on_hold"
+    CANCELED = "canceled"
+    UNAUTHORIZED = "unauthorized"
+
+    def finished(self) -> bool:
+        return self in {
+            WorkflowStatus.SUCCESS,
+            WorkflowStatus.FAILED,
+            WorkflowStatus.ERROR,
+            WorkflowStatus.CANCELED,
+            WorkflowStatus.NOT_RUN,
+        }
+
+
+class Workflow(BaseModel):
+    pipeline_id: str
+    # canceled_by: Optional[str] = None
+    id: str
+    name: str
+    # project_slug: str
+    # errored_by: Optional[str] = None
+    # tag: Optional[str] = None  # Workflow tag, not Git tag
+    status: WorkflowStatus
+    # started_by: str
+    # pipeline_number: int
+    # created_at: datetime
+    # stopped_at: Optional[datetime] = None
+
+
+# class JobStatus(Enum):
+#    SUCCESS = "success"
+#    RUNNING = "running"
+#    NOT_RUN = "not_run"
+#    FAILED = "failed"
+#    RETRIED = "retried"
+#    QUEUED = "queued"
+#    NOT_RUNNING = "not_running"
+#    INFRASTRUCTURE_FAIL = "infrastructure_fail"
+#    TIMEDOUT = "timedout"
+#    ON_HOLD = "on_hold"
+#    TERMINATED_UNKNOWN = "terminated-unknown"
+#    BLOCKED = "blocked"
+#    CANCELED = "canceled"
+#    UNAUTHORIZED = "unauthorized"
+
+
+# class JobType(Enum):
+#    BUILD = "build"
+#    APPROVAL = "approval"
+
+
+class Job(BaseModel):
+    # canceled_by: Optional[str] = None
+    # dependencies: List[str]
+    job_number: int
+    id: str
+    # started_at: Optional[datetime] = None
+    name: str
+    # approved_by: Optional[str] = None
+    # project_slug: str
+    # status: JobStatus
+    # type_: JobType = Field(alias="type")
+    # stopped_at: Optional[datetime] = None
+    # approval_request_id: Optional[str] = None
+
+
+# class Lifecycle(Enum):
+#    QUEUED = "queued"
+#    NOT_RUN = "not_run"
+#    NOT_RUNNING = "not_running"
+#    RUNNING = "running"
+#    FINISHED = "finished"
+
+
+# class Outcome(Enum):
+#    CANCELED = "canceled"
+#    INFRASTRUCTURE_FAIL = "infrastructure_fail"
+#    TIMEDOUT = "timedout"
+#    FAILED = "failed"
+#    NO_TESTS = "no_tests"
+#    SUCCESS = "success"
+
+
+class Jobv1Status(Enum):
+    RETRIED = "retried"
+    CANCELED = "canceled"
+    INFRASTRUCTURE_FAIL = "infrastructure_fail"
+    TIMEDOUT = "timedout"
+    NOT_RUN = "not_run"
+    RUNNING = "running"
+    FAILED = "failed"
+    QUEUED = "queued"
+    NOT_RUNNING = "not_running"
+    NO_TESTS = "no_tests"
+    FIXED = "fixed"
+    SUCCESS = "success"
+
+
+class Action(BaseModel):
+    # bash_command: Optional[str] = None
+    # run_time_millis: int
+    # start_time: datetime
+    # end_time: datetime
+    name: str
+    # exit_code: Optional[int] = None
+    # type_: str = Field(alias="type")
+    index: int
+    status: Jobv1Status
+    step: Optional[int] = None
+    # source: Optional[str] = None
+    # failed: Optional[bool] = None
+    # parallel: bool = False
+    # output_url: str
+    # messages: List[str?] = Field(default_factory=list)
+    # continue: Optional[???] = None
+    # timedout: Optional[???] = None
+    # infrastructure_fail: Optional[???] = None
+
+
+class Step(BaseModel):
+    name: str
+    actions: List[Action]
+
+
+class Jobv1(BaseModel):
+    # vcs_url: str
+    # build_url: str
+    # build_num: int
+    # branch: str
+    # vcs_revision: str
+    # committer_name: Optional[str] = None
+    # committer_email: Optional[str] = None
+    # subject: Optional[str] = None
+    # body: Optional[str] = None
+    # why: str
+    # dont_build: Optional[str?]
+    # queued_at: Optional[datetime] = None
+    # start_time: Optional[datetime] = None
+    # stop_time: Optional[datetime] = None
+    # build_time_millis: Optional[int] = None
+    # username: str
+    # reponame: str
+    # lifecycle: Lifecycle
+    # outcome: Optional[Outcome] = None
+    status: Jobv1Status
+    # retry_of: Optional[int] = None
+    steps: List[Step]
+
+
+class Artifact(BaseModel):
+    path: str
+    # node_index: int
+    url: str
